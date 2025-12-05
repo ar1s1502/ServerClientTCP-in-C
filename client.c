@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <string.h>
 
+size_t MAX_INPUT_SIZE = 256;
+
 int sendMsg(char* msg, int socket_num) {
   size_t msg_size = strlen(msg) + 1; //+ 1 for null byte
   printf("sending size %zu message: %s\n", msg_size, msg);
@@ -40,6 +42,17 @@ int main (int argc, char const* argv[]) {
   if (status < 0) {
     printf("Connection failure\n");
     return -1;
+  }
+
+  char client_cmd[MAX_INPUT_SIZE];
+  printf("Enter commands here. Press Ctrl^D to exit.\n");
+  while (fgets(client_cmd, MAX_INPUT_SIZE, stdin)) {
+    size_t cmd_size = strlen(client_cmd);
+    if (cmd_size > 0 && client_cmd[cmd_size-1] == '\n') {
+      client_cmd[cmd_size-1] = '\0';
+    }
+    sendMsg(client_cmd, test_socket);
+    receiveMsg(test_socket);
   }
   
   char* msg = "echo Hello server, this is client";
