@@ -66,13 +66,6 @@ int main (int argc, char const* argv[]) {
   sendMsg(msg, test_socket);
   receiveMsg(test_socket);
 
-  //char* msg = "echo Hello server, this is client";
-  //sendMsg(msg, test_socket);
-  //receiveMsg(test_socket);
-
-  //msg = "random unrecognized command to server";
-  //sendMsg(msg, test_socket);
-  //receiveMsg(test_socket);
   printf("closing server socket\n");  
   close(test_socket);
   return 0;
