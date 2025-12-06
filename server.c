@@ -5,8 +5,18 @@
 #include <string.h>			// for strcpy, memset
 #include <unistd.h>			// for read, write, close  
 
+
+// initialize a command struct?
+typedef struct {
+  char* cmd;
+  int (*func_ptr) (char*);    
+} Command;
+//have a const size array of Command structs, iterate through them all to match cmd name. 
+//if match, then exec func pointer
+//would be faster if you could hash? but then you'd need a hash table with custom hash for Command struct...
 char* echo = "echo";
 char* temp = "temp";
+char* exit_cmd = "exit";
 const int PORT_NUM = 8080;
 
 int sendMsg(char* msg, int socket_num) {
@@ -20,15 +30,15 @@ int sendMsg(char* msg, int socket_num) {
 char* receiveMsg(int socket_num) {
   size_t msg_size;
   read(socket_num, &msg_size, sizeof(msg_size));
-  printf("msg_size: %zu\n", msg_size);
+  //printf("msg_size: %zu\n", msg_size);
   char* buf = (char*) malloc(msg_size);
   read(socket_num, buf, msg_size);     
-  buf[msg_size] = '\0';
+  buf[msg_size-1] = '\0';
   printf("received size %zu message from client on %d socket_num: %s\n", msg_size, socket_num, buf);
   return buf;
  }
 
-int read_whitespace(char* msg) {
+size_t read_whitespace(char* msg) {
   int whitespace = 0;
   while (msg[whitespace] == ' ') {
     whitespace++;
@@ -37,9 +47,9 @@ int read_whitespace(char* msg) {
 }
   
 char* readCommand(char* client_msg) {
-  int whitespace = read_whitespace(client_msg);
-  int end = whitespace;
-  while (client_msg[end] != ' ') {
+  size_t whitespace = read_whitespace(client_msg);
+  size_t end = whitespace;
+  while (end <= strlen(client_msg) && client_msg[end] != ' ') {
     end++;
   }
   size_t cmd_size = (size_t) (end - whitespace + 1);
@@ -52,7 +62,7 @@ char* readCommand(char* client_msg) {
 int executeCommand(char* cmd, char* msg, int socket_num) {
   int success;
   if (strcmp(cmd, echo) == 0) {
-    int whitespace = read_whitespace(msg + strlen(echo));
+    size_t whitespace = read_whitespace(msg + strlen(echo));
     sendMsg(msg + strlen(cmd) + whitespace, socket_num);
   }
   else {
@@ -81,14 +91,29 @@ int main (int argc, char const* argv[]) {
   int client_socket = accept(test_socket, (struct sockaddr*) &client_address, &cli_address_len);
   printf("created connection with client on socket number %d\n", client_socket);  
 
-  while (
-  char* client_msg = receiveMsg(client_socket);
-  char* client_cmd = readCommand(client_msg);
-  executeCommand(client_cmd, client_msg, client_socket);
+  char* client_msg;
+  char* client_cmd;
+  while (1) {
+    client_msg = receiveMsg(client_socket);
+    client_cmd = readCommand(client_msg);
+    if (strcmp(client_cmd, exit_cmd) == 0) {
+      printf("terminating connection with client\n");
+      sendMsg("connection terminated", client_socket);
+      free(client_msg);
+      free(client_cmd);
+      close(client_socket);
+      close(test_socket);
+      return 0;
+    }
+    executeCommand(client_cmd, client_msg, client_socket);
+  }
+  //char* client_msg = receiveMsg(client_socket);
+  //char* client_cmd = readCommand(client_msg);
+  //executeCommand(client_cmd, client_msg, client_socket);
  
-  client_msg = receiveMsg(client_socket);
-  client_cmd = readCommand(client_msg);
-  executeCommand(client_cmd, client_msg, client_socket);
+  //client_msg = receiveMsg(client_socket);
+  //client_cmd = readCommand(client_msg);
+  //executeCommand(client_cmd, client_msg, client_socket);
      
   close(client_socket);
   //read(test_socket)

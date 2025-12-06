@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <string.h>
 
+int SERV_PORT_NUM = 8080;
+char* exit_cmd = "exit";
 size_t MAX_INPUT_SIZE = 256;
 
 int sendMsg(char* msg, int socket_num) {
@@ -36,7 +38,7 @@ int main (int argc, char const* argv[]) {
   int test_socket = socket(AF_INET, SOCK_STREAM, 0);
   serv_address.sin_family = AF_INET;
   serv_address.sin_addr.s_addr = htonl(INADDR_ANY); 
-  serv_address.sin_port = htons(8080);
+  serv_address.sin_port = htons(SERV_PORT_NUM);
   
   int status = connect(test_socket, (struct sockaddr*) &serv_address, sizeof(serv_address));
   if (status < 0) {
@@ -52,16 +54,24 @@ int main (int argc, char const* argv[]) {
       client_cmd[cmd_size-1] = '\0';
     }
     sendMsg(client_cmd, test_socket);
-    receiveMsg(test_socket);
+    receiveMsg(test_socket); 
+    if (strcmp(client_cmd, exit_cmd) == 0) {
+      close(test_socket);
+      return 0;
+    }
   }
-  
-  char* msg = "echo Hello server, this is client";
+
+  char* msg = "exit";
   sendMsg(msg, test_socket);
   receiveMsg(test_socket);
 
-  msg = "random unrecognized command to server";
-  sendMsg(msg, test_socket);
-  receiveMsg(test_socket);
+  //char* msg = "echo Hello server, this is client";
+  //sendMsg(msg, test_socket);
+  //receiveMsg(test_socket);
+
+  //msg = "random unrecognized command to server";
+  //sendMsg(msg, test_socket);
+  //receiveMsg(test_socket);
   
   close(test_socket);
   return 0;
