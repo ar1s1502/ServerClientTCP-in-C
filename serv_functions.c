@@ -23,7 +23,7 @@ char* receiveMsg(int socket_num) {
   char* buf = (char*) malloc(msg_size);
   read(socket_num, buf, msg_size);     
   buf[msg_size-1] = '\0';
-  printf("received size %zu message from client on %d socket_num: %s\n", msg_size, socket_num, buf);
+  printf("received size %zu message from client on socket_num %d: %s\n", msg_size, socket_num, buf);
   return buf;
  }
 
@@ -44,8 +44,6 @@ char* readCommand(char* client_msg) {
   size_t cmd_size = (size_t) (end - whitespace + 1);
   char* client_cmd = malloc(cmd_size);
   strlcpy(client_cmd, client_msg + whitespace, cmd_size);  
-  printf("whitespace: %zu\n", whitespace);
-  printf("client cmd: %s\n", client_cmd); 
   return client_cmd;
 }
 
@@ -58,7 +56,7 @@ char* get_args(char* cmd, char* msg) {
     char* args = (char*) malloc(args_size);
     //printf("args_size: %zu\n", args_size);
     strlcpy(args, msg + space_til_arg, args_size);
-    printf("args: %s\n", args);  
+    //printf("args: %s\n", args);  
     return args;
 }
 
