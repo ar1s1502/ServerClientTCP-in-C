@@ -56,6 +56,7 @@ int main (int argc, char const* argv[]) {
     sendMsg(client_cmd, test_socket);
     receiveMsg(test_socket); 
     if (strcmp(client_cmd, exit_cmd) == 0) {
+      printf("closing server socket\n");
       close(test_socket);
       return 0;
     }
@@ -72,7 +73,7 @@ int main (int argc, char const* argv[]) {
   //msg = "random unrecognized command to server";
   //sendMsg(msg, test_socket);
   //receiveMsg(test_socket);
-  
+  printf("closing server socket\n");  
   close(test_socket);
   return 0;
 }

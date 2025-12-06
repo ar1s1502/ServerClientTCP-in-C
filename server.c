@@ -84,9 +84,10 @@ int main (int argc, char const* argv[]) {
   serv_address.sin_port = htons(PORT_NUM);
   //printf("listening on port %d\n", serv_address.sin_port); this doesn't work; 
   int test_socket = socket(AF_INET, SOCK_STREAM, 0);
+  printf("Starting server\n");
   bind(test_socket, (struct sockaddr*) &serv_address, sizeof(struct sockaddr_in));
   listen(test_socket, 2);
-  printf("Starting server on port %d\n", PORT_NUM);
+  printf("listening on port %d\n", PORT_NUM);
   socklen_t cli_address_len = sizeof(struct sockaddr_in);
   int client_socket = accept(test_socket, (struct sockaddr*) &client_address, &cli_address_len);
   printf("created connection with client on socket number %d\n", client_socket);  
@@ -98,10 +99,12 @@ int main (int argc, char const* argv[]) {
     client_cmd = readCommand(client_msg);
     if (strcmp(client_cmd, exit_cmd) == 0) {
       printf("terminating connection with client\n");
-      sendMsg("connection terminated", client_socket);
+      sendMsg("connection terminated\n", client_socket);
       free(client_msg);
       free(client_cmd);
+      printf("closing client_socket\n");
       close(client_socket);
+      printf("closing server socket\n");
       close(test_socket);
       return 0;
     }
