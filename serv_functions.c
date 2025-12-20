@@ -4,9 +4,6 @@
 #include <unistd.h>         //for read/write/close
 #include "serv_functions.h"
 
-char* command_list[3] = {"ping", "echo", "temp"};
-size_t num_commands = sizeof(command_list) / sizeof(command_list[0]);
-//Command command_map[num_commands];
 
 int sendMsg(char* msg, int socket_num) {
   size_t msg_size = strlen(msg) + 1; //+ 1 for null
@@ -61,11 +58,38 @@ char* get_args(char* cmd, char* msg) {
 }
 
 
-int executeCommand(char* cmd, char* msg, int socket_num) {
+//command execution functions
+//echo: prints args
+void echo_exec(char* args, int client_socket) {
+  sendMsg(args, client_socket);
+}
+
+size_t NUM_CMD = 1; 
+
+Command* init_cmdmap() {
+  Command echo = {.cmd = "echo", .func_ptr = &echo_exec};
+  Command command_map[] = {
+    echo
+  };
+  Command* map_ptr = malloc(sizeof(command_map));
+  memcpy(map_ptr, command_map, sizeof(command_map));
+  return map_ptr;
+}
+
+//temp: converts F to C or C to F
+
+
+int executeCommand(char* cmd, char* msg, Command* cmd_map, int socket_num) {
   int success = 0;
   char* args = get_args(cmd, msg);
-  if (strcmp(cmd, "echo") == 0) {
-    echo_exec(args, socket_num);
+  //Command* cmds = get_all_cmd();
+  size_t i = 0;
+  Command cmd_struct = cmd_map[i];
+  while ((strcmp(cmd, cmd_struct.cmd) != 0) && (i < NUM_CMD)) {
+    cmd_struct = cmd_map[i++];
+  } 
+  if (strcmp(cmd, cmd_struct.cmd) == 0) {
+    cmd_struct.func_ptr(args, socket_num);  
   }
   else {
     char* fail_msg = "unknown command";
@@ -73,17 +97,6 @@ int executeCommand(char* cmd, char* msg, int socket_num) {
     sendMsg(fail_msg, socket_num);
     success = -1;
   }
-  free(msg);
-  free(cmd);
   free(args);
   return success;
 }
-
-
-//command execution functions
-
-//echo: prints args
-int echo_exec(char* args, int client_socket) {
-  return sendMsg(args, client_socket);
-}
-
