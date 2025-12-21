@@ -50,10 +50,11 @@ char* get_args(char* cmd, char* msg) {
     char* cmdstrt = strstr(msg, cmd);
     char* arg_start = cmdstrt + strlen(cmd);
     if (arg_start[0] == '\0') { return NULL; }
-    size_t arg_len = sizeof(arg_start);
-    char* args = malloc(arg_len);
-    strlcpy(args, arg_start, arg_len);
-    printf("args: %s\n", args);
+    size_t arg_len = strlen(arg_start);
+    char* args = malloc(arg_len + 1);
+    strlcpy(args, arg_start, arg_len + 1);
+    printf("arg_start: %s\n", arg_start);
+    printf("arg_len: %zu\nargs: %s\n", arg_len, args);
     return args;
 }
 
@@ -78,7 +79,7 @@ void echo_exec(char* args, int client_socket) {
 char* match_int(char* input) {
   regex_t regex;
   regmatch_t matches[2]; //capture groups are stored in regmatch_t array. 0th element is entire capture, 1th element is first capture, 2nd element is second capture, etc. 
-  const char* pattern = "([0-9]+(\\.[0-9]*)?|\\.[0-9]*)";
+  const char* pattern = "([-+]?[0-9]+\\.[0-9]+|[-+]?[0-9]+\\.?)";
   if (regcomp(&regex, pattern, REG_EXTENDED) != 0) { //regex must be compiled
     fprintf(stderr, "Couldn't compile regex\n");
     return NULL;
@@ -101,11 +102,12 @@ void temp_exec(char* args, int client_socket) {
   }
   const size_t max_digits = 6;
   char* match = match_int(args);
-  //printf("match: %s\n", match);
-  long temp = strtol(match, NULL, 10);
+  printf("match: %s\n", match);
+  double temp = strtod(match, NULL);
+  printf("matchtemp double: %f\n", temp);  
   free(match);
   if (strstr(args, "-c") != NULL) {
-    float cels_temp = ((float) temp - 32) * (((float) 5)/9);
+    double cels_temp = (temp - 32) * (((double) 5)/9);
     char* new_temp = malloc(max_digits);
     snprintf(new_temp, max_digits, "%f", cels_temp);
     char* text = " degrees Celsius";
@@ -116,7 +118,7 @@ void temp_exec(char* args, int client_socket) {
     free(new_temp);
     return;
   } else if (strstr(args, "-f") != NULL) { //celsius to fahrenheit
-    float fahr_temp = (((float) 9)/5) * temp + 32;
+    double fahr_temp = (((double) 9)/5) * temp + 32;
     char* new_temp = malloc(max_digits);
     snprintf(new_temp, max_digits, "%f", fahr_temp);
     char* text = " degrees Fahrenheit";
