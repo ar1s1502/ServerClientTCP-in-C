@@ -76,9 +76,6 @@ Command* init_cmdmap() {
   return map_ptr;
 }
 
-//temp: converts F to C or C to F
-
-
 int executeCommand(char* cmd, char* msg, Command* cmd_map, int socket_num) {
   int success = 0;
   char* args = get_args(cmd, msg);
