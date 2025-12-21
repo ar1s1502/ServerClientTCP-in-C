@@ -4,6 +4,7 @@
 typedef struct {
   char* cmd;
   void (*func_ptr) (char*, int);    
+  char* desc;
 } Command;
 
 int sendMsg(char* msg, int socket_num);

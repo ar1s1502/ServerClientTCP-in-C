@@ -73,8 +73,6 @@ void echo_exec(char* args, int client_socket) {
   }  
 }
 
-
-//#TODO: implement for negative valued temperatures
 //helper func to regex match the integer argument for temp command
 char* match_int(char* input) {
   regex_t regex;
@@ -135,13 +133,41 @@ void temp_exec(char* args, int client_socket) {
   return;
 }
 
+void help_exec(char* args, int client_socket) { 
+  Command* cmd_map = init_cmdmap();
+  size_t i = 0;
+  Command cmd_struct = cmd_map[i];
+  char* header = "list of executable commands\n";
+  char* spacer = ": ";
+  size_t buf_size = strlen(header) + 1;
+  char* msg = malloc(buf_size);
+  strlcpy(msg, header, buf_size);
+  size_t prevmsg_len;
+  size_t newmsg_len;
+  while (strcmp("sentinel", cmd_struct.cmd) != 0) {
+    printf("%zu\n", i);
+    prevmsg_len = strlen(msg);
+    newmsg_len = prevmsg_len + strlen(cmd_struct.cmd) + strlen(spacer) + strlen(cmd_struct.desc) + 1;
+    msg = (char*) realloc(msg, newmsg_len);
+    strlcat(msg, cmd_struct.cmd, prevmsg_len + strlen(cmd_struct.cmd) + 1);
+    strlcat(msg, spacer, prevmsg_len + strlen(cmd_struct.cmd) + strlen(spacer) + 1);
+    strlcat(msg, cmd_struct.desc, newmsg_len); 
+    cmd_struct = cmd_map[++i];
+  }
+  sendMsg(msg, client_socket);
+  free(msg);
+  free(cmd_map);
+}
+
 Command* init_cmdmap() {
-  Command echo = {.cmd = "echo", .func_ptr = &echo_exec};
-  Command temp = {.cmd = "temp", .func_ptr = &temp_exec};
+  Command echo = {.cmd = "echo", .func_ptr = &echo_exec, .desc = "echo the argument given\n"};
+  Command temp = {.cmd = "temp", .func_ptr = &temp_exec, .desc = "convert given float value to celsius (-c) or fahrenheit (-f)\n"};
+  Command help = {.cmd = "help", .func_ptr = &help_exec, .desc = "list all executable server commands\n"};
   Command sentinel = {.cmd = "sentinel", .func_ptr = NULL}; //dummy to signal end of list
   Command command_map[] = {
     echo,
     temp,
+    help,
     sentinel 
   };
   Command* map_ptr = malloc(sizeof(command_map));
@@ -160,7 +186,7 @@ int executeCommand(char* cmd, char* msg, Command* cmd_map, int socket_num) {
       free(args);
       return success;
     } else {
-      cmd_struct = cmd_map[i++]; 
+      cmd_struct = cmd_map[++i]; 
     }
   }
   char* fail_msg = "unknown command";
