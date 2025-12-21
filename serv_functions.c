@@ -78,7 +78,7 @@ void echo_exec(char* args, int client_socket) {
 char* match_int(char* input) {
   regex_t regex;
   regmatch_t matches[2]; //capture groups are stored in regmatch_t array. 0th element is entire capture, 1th element is first capture, 2nd element is second capture, etc. 
-  const char* pattern = "([0-9]+(\\.[0-9]*)?|\\.[0-9]+)";
+  const char* pattern = "([0-9]+(\\.[0-9]*)?|\\.[0-9]*)";
   if (regcomp(&regex, pattern, REG_EXTENDED) != 0) { //regex must be compiled
     fprintf(stderr, "Couldn't compile regex\n");
     return NULL;
@@ -133,14 +133,14 @@ void temp_exec(char* args, int client_socket) {
   return;
 }
 
-size_t NUM_CMD = 2; 
-
 Command* init_cmdmap() {
   Command echo = {.cmd = "echo", .func_ptr = &echo_exec};
   Command temp = {.cmd = "temp", .func_ptr = &temp_exec};
+  Command sentinel = {.cmd = "sentinel", .func_ptr = NULL}; //dummy to signal end of list
   Command command_map[] = {
     echo,
-    temp
+    temp,
+    sentinel 
   };
   Command* map_ptr = malloc(sizeof(command_map));
   memcpy(map_ptr, command_map, sizeof(command_map));
@@ -150,21 +150,21 @@ Command* init_cmdmap() {
 int executeCommand(char* cmd, char* msg, Command* cmd_map, int socket_num) {
   int success = 0;
   char* args = get_args(cmd, msg);
-  //Command* cmds = get_all_cmd();
   size_t i = 0;
   Command cmd_struct = cmd_map[i];
-  while ((strcmp(cmd, cmd_struct.cmd) != 0) && (i < NUM_CMD)) {
-    cmd_struct = cmd_map[i++];
-  } 
-  if (strcmp(cmd, cmd_struct.cmd) == 0) {
-    cmd_struct.func_ptr(args, socket_num);  
+  while (strcmp("sentinel", cmd_struct.cmd) != 0) {
+    if (strcmp(cmd, cmd_struct.cmd) == 0) {
+      cmd_struct.func_ptr(args, socket_num);
+      free(args);
+      return success;
+    } else {
+      cmd_struct = cmd_map[i++]; 
+    }
   }
-  else {
-    char* fail_msg = "unknown command";
-    printf("%s\n", fail_msg);
-    sendMsg(fail_msg, socket_num);
-    success = -1;
-  }
+  char* fail_msg = "unknown command";
+  printf("%s\n", fail_msg);
+  sendMsg(fail_msg, socket_num);
+  success = -1;
   free(args);
   return success;
 }
