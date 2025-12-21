@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>         //for read/write/close
+#include <string.h>         //for strstr 
+#include <regex.h>          //POSIX regex library
 #include "serv_functions.h"
 
 
@@ -45,15 +47,13 @@ char* readCommand(char* client_msg) {
 }
 
 char* get_args(char* cmd, char* msg) {
-    size_t space_til_arg = read_whitespace(msg);
-    space_til_arg += strlen(cmd) + read_whitespace(msg + space_til_arg + strlen(cmd));
-    //printf("space_til_arg: %zu\n", space_til_arg);
-    //printf("first char of args: %c\n", msg[space_til_arg]);
-    size_t args_size = strlen(msg + space_til_arg) + 1; //+1 for nul term
-    char* args = (char*) malloc(args_size);
-    //printf("args_size: %zu\n", args_size);
-    strlcpy(args, msg + space_til_arg, args_size);
-    //printf("args: %s\n", args);  
+    char* cmdstrt = strstr(msg, cmd);
+    char* arg_start = cmdstrt + strlen(cmd);
+    if (arg_start[0] == '\0') { return NULL; }
+    size_t arg_len = sizeof(arg_start);
+    char* args = malloc(arg_len);
+    strlcpy(args, arg_start, arg_len);
+    printf("args: %s\n", args);
     return args;
 }
 
@@ -61,15 +61,86 @@ char* get_args(char* cmd, char* msg) {
 //command execution functions
 //echo: prints args
 void echo_exec(char* args, int client_socket) {
-  sendMsg(args, client_socket);
+  if (args != NULL) {
+    char* resp = args;
+    if (args[0] == ' ') {
+      resp += 1;
+    }
+    sendMsg(resp, client_socket);
+  } else {
+    sendMsg("no args given", client_socket);
+  }  
 }
 
-size_t NUM_CMD = 1; 
+
+//#TODO: implement for negative valued temperatures
+//helper func to regex match the integer argument for temp command
+char* match_int(char* input) {
+  regex_t regex;
+  regmatch_t matches[2]; //capture groups are stored in regmatch_t array. 0th element is entire capture, 1th element is first capture, 2nd element is second capture, etc. 
+  const char* pattern = "([0-9]+(\\.[0-9]*)?|\\.[0-9]+)";
+  if (regcomp(&regex, pattern, REG_EXTENDED) != 0) { //regex must be compiled
+    fprintf(stderr, "Couldn't compile regex\n");
+    return NULL;
+  }
+  if (regexec(&regex, input, 2, matches, 0) == 0) {
+  //A regmatch_t struct has a .rm_so = index of start of match and a .rm_eo = index of end of match in input string
+    size_t length = (size_t) (matches[1].rm_eo - matches[1].rm_so); 
+    char* match = malloc(length + 1);
+    strlcpy(match, input + matches[1].rm_so, length + 1); 
+    return match;
+  }
+  return NULL;
+}
+//temp: convert celsius to fahrenheit or vice versa
+void temp_exec(char* args, int client_socket) {  
+  if (args == NULL) {
+    char* msg = "No arguments given\n";
+    sendMsg(msg, client_socket);
+    return;
+  }
+  const size_t max_digits = 6;
+  char* match = match_int(args);
+  //printf("match: %s\n", match);
+  long temp = strtol(match, NULL, 10);
+  free(match);
+  if (strstr(args, "-c") != NULL) {
+    float cels_temp = ((float) temp - 32) * (((float) 5)/9);
+    char* new_temp = malloc(max_digits);
+    snprintf(new_temp, max_digits, "%f", cels_temp);
+    char* text = " degrees Celsius";
+    size_t resp_size = strlen(text) + strlen(new_temp) + 1;
+    new_temp  = (char*) realloc(new_temp, resp_size); 
+    strlcat(new_temp, text, resp_size);
+    sendMsg(new_temp, client_socket);
+    free(new_temp);
+    return;
+  } else if (strstr(args, "-f") != NULL) { //celsius to fahrenheit
+    float fahr_temp = (((float) 9)/5) * temp + 32;
+    char* new_temp = malloc(max_digits);
+    snprintf(new_temp, max_digits, "%f", fahr_temp);
+    char* text = " degrees Fahrenheit";
+    size_t resp_size = strlen(text) + strlen(new_temp) + 1;
+    new_temp  = (char*) realloc(new_temp, resp_size); 
+    strlcat(new_temp, text, resp_size);
+    sendMsg(new_temp, client_socket);
+    free(new_temp);
+    return;
+  } else {
+    char* msg = "Enter -f or -c to specify fahrenheit or celsius conversion, respectively\n";
+    sendMsg(msg, client_socket);
+  }
+  return;
+}
+
+size_t NUM_CMD = 2; 
 
 Command* init_cmdmap() {
   Command echo = {.cmd = "echo", .func_ptr = &echo_exec};
+  Command temp = {.cmd = "temp", .func_ptr = &temp_exec};
   Command command_map[] = {
-    echo
+    echo,
+    temp
   };
   Command* map_ptr = malloc(sizeof(command_map));
   memcpy(map_ptr, command_map, sizeof(command_map));
