@@ -4,14 +4,16 @@
 #include <unistd.h>         //for read/write/close
 #include <string.h>         //for strstr 
 #include <regex.h>          //POSIX regex library
+#include <sys/socket.h>
+
 #include "serv_functions.h"
 
 
 int sendMsg(char* msg, int socket_num) {
   size_t msg_size = strlen(msg) + 1; //+ 1 for null
   printf("sending size %zu message to client at socket num %d: %s\n", msg_size, socket_num, msg);
-  write(socket_num, &msg_size, sizeof(size_t));
-  write(socket_num, msg, msg_size);
+  send(socket_num, &msg_size, sizeof(size_t), 0);
+  send(socket_num, msg, msg_size, 0);
   return 0;
 }
 
@@ -20,7 +22,11 @@ char* receiveMsg(int socket_num) {
   read(socket_num, &msg_size, sizeof(msg_size));
   //printf("msg_size: %zu\n", msg_size);
   char* buf = (char*) malloc(msg_size);
-  read(socket_num, buf, msg_size);     
+  size_t read_bytes = recv(socket_num, buf, msg_size, 0);
+  if (read_bytes != msg_size) {
+    printf("packets dropped\n");
+    return NULL;  
+  }
   buf[msg_size-1] = '\0';
   printf("received size %zu message from client on socket_num %d: %s\n", msg_size, socket_num, buf);
   return buf;
@@ -29,11 +35,11 @@ char* receiveMsg(int socket_num) {
 size_t read_whitespace(char* msg) {
   int whitespace = 0;
   while (msg[whitespace] == ' ') {
-    whitespace++;
+    whitespace++;  
   }
   return whitespace;
 }
-  
+
 char* readCommand(char* client_msg) {
   size_t whitespace = read_whitespace(client_msg);
   size_t end = whitespace;

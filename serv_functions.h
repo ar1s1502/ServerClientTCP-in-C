@@ -9,7 +9,6 @@ typedef struct {
 
 int sendMsg(char* msg, int socket_num);
 char* receiveMsg(int socket_num);
-size_t read_whitespace(char* msg);
 char* readCommand(char* client_msg);
 char* get_args(char* cmd, char* msg);
 Command* init_cmdmap();

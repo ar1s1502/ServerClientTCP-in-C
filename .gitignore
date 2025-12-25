@@ -1,3 +1,5 @@
 *.dSYM/
 */Contents/
+server2.c
+regex,txt
 *.swp

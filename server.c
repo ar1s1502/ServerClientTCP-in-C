@@ -1,5 +1,5 @@
 #include <arpa/inet.h>		// for inet_addr, bind, listen, accept, socket
-#include <sys/socket.h>
+#include <sys/socket.h>   //for socket, send, recv
 #include <netinet/in.h>		// for structures relating to IPv4 addresses
 #include <stdio.h>			// for print functions
 #include <stdlib.h>			// for malloc, free, exit
@@ -9,12 +9,12 @@
 
 #include "serv_functions.h" //helper functions for server
 
-//TODO: hash table for functions?
-//TODO: how to read commands to server during server execution?
-//TODO: multiple clients with different connections?
+//TODO: multiple clients with different connections with <poll.h>
 //TODO: loggin in?
 //TODO: file storage 
 //TODO: encryption of file storage
+//TODO: how to read commands to server during server execution?
+//TODO: hash table for functions?
 
 //IPv4-only sockaddr_in struct:
 //struct sockaddr_in {
@@ -44,11 +44,13 @@ int main (int argc, char const* argv[]) {
   int test_socket = socket(AF_INET, SOCK_STREAM, 0); //AFINET: IPv4, SOCK_STREAM: TCP (bytestream), 0: IP 
   printf("Starting server\n");
   
-  //int bind(int sockfd, sockaddr *addr, socklen_t addrlen);
-  bind(test_socket, (struct sockaddr*) &serv_address, sizeof(struct sockaddr_in));
   //enable socket reuse when rerunning server
   int yes = 1;
   setsockopt(test_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+  
+  //int bind(int sockfd, sockaddr *addr, socklen_t addrlen);
+  bind(test_socket, (struct sockaddr*) &serv_address, sizeof(struct sockaddr_in));
+
   //int listen(int sockfd, int backlog). 
   listen(test_socket, BACKLOG); //up to {BACKLOG} pending connections in queue to be accepted.
   
@@ -73,43 +75,43 @@ int main (int argc, char const* argv[]) {
 //if (strcmp(serv_cmd, "close") == 0) {
   //break;
 //}
-while(1) {
-    socklen_t cli_address_len = sizeof(struct sockaddr_in);
-    int client_socket = accept(test_socket, (struct sockaddr*) &client_address, &cli_address_len);
-    if (client_socket == -1) {
-      printf("connection failed\n");
-      continue;
-    }  
-    //could probably make this a function
-    if (!fork()) { //successful fork() returns 0
-      close(test_socket); //parent's listening socket unneeded; only handles client_socket, not new connections
-      printf("created connection with client on socket number %d\n", client_socket);     
+  while(1) {
+      socklen_t cli_address_len = sizeof(struct sockaddr_in);
+      int client_socket = accept(test_socket, (struct sockaddr*) &client_address, &cli_address_len);
+      if (client_socket == -1) {
+        printf("connection failed\n");
+        continue;
+      }  
+      //could probably make this a function
+      if (!fork()) { //successful fork() returns 0
+        close(test_socket); //parent's listening socket unneeded; only handles client_socket, not new connections
+        printf("created connection with new client\n"); 
 
-      Command* cmd_map = init_cmdmap();
-      char* client_msg;
-      char* client_cmd;
-      while (1) {
-        client_msg = receiveMsg(client_socket);
-        client_cmd = readCommand(client_msg);
-        if (strcmp(client_cmd, "exit") == 0) {
-          sendMsg("connection terminated\n", client_socket);
-          free(client_msg);
-          free(client_cmd);
-          free(cmd_map);
-          printf("closing connection on socket %d\n", client_socket);
-          close(client_socket);
-          exit(0);
+        Command* cmd_map = init_cmdmap();
+        char* client_msg;
+        char* client_cmd;
+        while (1) {
+          client_msg = receiveMsg(client_socket);
+          client_cmd = readCommand(client_msg);
+          if (strcmp(client_cmd, "exit") == 0) {
+            sendMsg("connection terminated\n", client_socket);
+            free(client_msg);
+            free(client_cmd);
+            free(cmd_map);
+            printf("closing connection on socket %d\n", client_socket);
+            close(client_socket);
+            exit(0);
+          }
+          executeCommand(client_cmd, client_msg, cmd_map, client_socket);
         }
-        executeCommand(client_cmd, client_msg, cmd_map, client_socket);
+        free(cmd_map);
+        free(client_msg);
+        free(client_cmd);
+        close(client_socket);
+        exit(0); 
       }
-      free(cmd_map);
-      free(client_msg);
-      free(client_cmd);
+      
       close(client_socket);
-      exit(0); 
-    }
-    
-    close(client_socket);
   }
 
   printf("shutting down server\n");
