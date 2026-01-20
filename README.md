@@ -10,5 +10,9 @@ To compile the the server.c program, run
 gcc server.c serv_functions.c -o server
 ```
 
+**Cool Features:**
+- Custom C header file to import my serv_functions.c library into the server.c file
+- Server stores commands in a "command map." It's technically a list of Command structs, not a map, but the idea is that the command struct maps the command name string to its corresponding execute command function, in a function pointer
+- Server can fork to handle multiple client connections at once
 
-Written in terminal vim, using [Leak Sanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
+Written in terminal vim; used [Leak Sanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer) to ensure memory safety
